@@ -1,0 +1,197 @@
+{
+  "name": "Bulk Products",
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "Start",
+      "type": "n8n-nodes-base.start",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ],
+      "id": "d509fbda-bb6d-481c-bce2-ce9f9aaa8664"
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "url": "https://[INSTANCE URL]/api/v0/products/bulk_products",
+        "options": {},
+        "headerParametersUi": {
+          "parameter": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "queryParametersUi": {
+          "parameter": [
+            {}
+          ]
+        }
+      },
+      "id": "ba56c53e-6501-4b0c-9f05-e73fd982e4a2",
+      "name": "HTTP Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "7",
+          "name": "Cwm Food Hub"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "// Code here will run only once, no matter how many input items there are.\n// More info and help: https://docs.n8n.io/nodes/n8n-nodes-base.function\n// Tip: You can use luxon for dates and $jmespath for querying JSON structures\n\nvar stockList = [];\n\nitems[0].json.products.map(item => {\n   item.variants.map (variant => {\n    stockList.push ({\n    json: {\n      Producer: variant.producer_name,\n      SKU: item.sku,\n      ProductName: item.name,\n      Stock: (variant.on_demand == 1 ? 'unlimited' : variant.on_hand),\n      Price: variant.price\n    }\n  })})});\n     \nreturn stockList;\n\n"
+      },
+      "id": "34ac2bc6-1f6a-49a9-a90a-8f3460d48a21",
+      "name": "Function",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "triggerTimes": {
+          "item": [
+            {
+              "mode": "everyWeek",
+              "weekday": "5"
+            }
+          ]
+        }
+      },
+      "id": "1f364f0d-80d1-4bfd-b4bd-44153dcb892e",
+      "name": "Cron",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [
+        240,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "toFile",
+        "binaryPropertyName": "=data",
+        "options": {
+          "fileName": "=StockReport.xls"
+        }
+      },
+      "id": "5966081e-73c6-4487-a8c5-952172e43cb5",
+      "name": "Spreadsheet File",
+      "type": "n8n-nodes-base.spreadsheetFile",
+      "typeVersion": 1,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "mail",
+        "fromEmail": "hello@openfoodnetwork.org.uk",
+        "fromName": "OFN Team",
+        "subject": "Stock Report",
+        "contentType": "text/html",
+        "contentValue": "Hi there, </br></br>\n\nPlease find your Stock Report attached.</br></br>\n\nWarm wishes,</br>\nThe OFN Team </br></br>\n",
+        "additionalFields": {
+          "attachments": "data"
+        }
+      },
+      "id": "c98a8587-b62d-426b-89af-b96678053560",
+      "name": "SendGrid",
+      "type": "n8n-nodes-base.sendGrid",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        300
+      ],
+      "credentials": {
+        "sendGridApi": {
+          "id": "6",
+          "name": "SendGrid account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Function",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Function": {
+      "main": [
+        [
+          {
+            "node": "Spreadsheet File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cron": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Spreadsheet File": {
+      "main": [
+        [
+          {
+            "node": "SendGrid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "id": 2,
+  "meta": {
+    "instanceId": "28870f2868c6821b7375131334e38ef8f27782bd5b2dd7efd016a3383f12b722"
+  },
+  "tags": []
+}
